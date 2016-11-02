@@ -245,9 +245,6 @@ if __name__ == '__main__':
             if what_to_do not in ['buy', 'sell', 'check', 'pass']:
                 print "WTF ??"
         day += 1
-                
-
-        
-    
-    
-        
+        log_obj.debug2('day', day)
+        log_obj.debug2('stock_book', stock_book)
+        log_obj.debug2('trade_history', trade_history)
