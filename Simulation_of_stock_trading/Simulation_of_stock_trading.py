@@ -20,12 +20,11 @@ log_obj.cleanup('Simulation_of_stock_trading.log', if_cleanup = True) # 是否�
 file_path1 = 'D:\Git_Clone\Single_Files\SZ#002549.csv'
 file_path2 = 'D:\Git_Clone\Single_Files\SZ#300137.csv'
 
-def initialization():
+def initialization(stock_num):
     """
     初始化程序，准备数据
     :return: 股票历史数据
     """
-    stock_num = raw_input("Choose a stock data(1-2):\n")
     if_right_input = '1' <= stock_num <= '2'
     log_obj.debug(if_right_input)
     if not if_right_input:  # 没有正确输入则报错
@@ -47,20 +46,28 @@ def initialization():
     f = open(file_name, 'r')
     name = f.readline()
     f.close()
+    # # 初始化持仓表
+    # stock_book[stock_num] = 0
 
     # name = name.decode('gbk', 'replace').encode('utf8')
     
     return o, h, l, c, date, stock_num
 
 def data_contrl():
-    pass
+    # 防止多次数据初始化
+    stock_num = raw_input("Choose a stock data(1-2):\n")
+    if stock_num not in stocks.keys():
+        stocks[stock_num] = initialization(stock_num)
+        return stocks[stock_num]
+    else:
+        return stocks[stock_num]
 
 def show_k_bar(stock_data, title = None, bar_num = 30):
     print 'Showing stock No.%s' % str(stock_data[5])
     time.sleep(2)
-    
-    stock_data = [arr[: bar_num] for arr in stock_data if
-                  type(arr) == np.ndarray]
+    # 规定第一天的数据为K线图里的第31根
+    stock_data = [arr[30 + day - bar_num - 1: 30 + day] for arr in
+                  stock_data if type(arr) == np.ndarray]
     log_obj.debug2('stock_data', stock_data)
     
     #  主要刻度
@@ -99,7 +106,7 @@ def show_k_bar(stock_data, title = None, bar_num = 30):
     return
 
     
-def trade(stock_book, trade_history, cash, day, b_or_s):
+def trade(b_or_s):
     """
     股票交易
     """
@@ -117,22 +124,21 @@ def trade(stock_book, trade_history, cash, day, b_or_s):
         num = int(raw_input("Enter here:\n"))
         if num % 100 == 0:
             # 检查是否持有此类股票
-            if stock_num in stock_book.keys():
-                shareholding = stock_book[stock_num]
-            else:
-                shareholding = 0
+            if stock_num not in stock_book.keys():
+                stock_book[stock_num] = 0
+            shareholding = stock_book[stock_num]
             # 检查是否能成交
-            tradable = if_tradable(price, shareholding, stock_data, day, num, cash,
+            tradable = if_tradable(price, shareholding, stock_data, num,
                                    b_or_s)
             log_obj.debug2('tradable', tradable)
             if tradable:
                 if b_or_s == 'buy':
-                    trade_history.append([price, num, 'stock No.%d' % stock_num])
-                    cash -= price * num
+                    trade_history.append([price, num, 'stock No.%s' % stock_num])
+                    cash[day-1] -= price * num
                     stock_book[stock_num] += num
                 elif b_or_s == 'sell':
-                    trade_history.append([price, -num, 'stock No.%d' % stock_num])
-                    cash += price * num
+                    trade_history.append([price, -num, 'stock No.%s' % stock_num])
+                    cash[day - 1] += price * num
                     stock_book[stock_num] -= num
             else:
                 trade_history.append([price, "Fail to %s" % b_or_s])
@@ -141,15 +147,16 @@ def trade(stock_book, trade_history, cash, day, b_or_s):
         is_that_all = raw_input("Is that all you need(YES/NO)\n")
         if is_that_all.upper() == 'YES':
             break
-    return stock_book, trade_history, cash
+    return
 
-def buy(stock_book, trade_history, cash, day):
-    return trade(stock_book, trade_history, cash, day, 'buy')
+def buy():
+    trade('buy')
+    return
+def sell():
+    trade('sell')
+    return
 
-def sell(stock_book, trade_history, cash, day):
-    return trade(stock_book, trade_history, cash, day, 'sell')
-
-def if_tradable(price, shareholding, stock_data, day, num, cash, b_or_s):
+def if_tradable(price, shareholding, stock_data, num, b_or_s):
     # stock_data ----> o, h, l, c, date, name
     # 不能成交的情况：
     # 1.可用资金不足
@@ -174,11 +181,13 @@ def if_tradable(price, shareholding, stock_data, day, num, cash, b_or_s):
     else:
         return False
     
-def check(day):
+def check():
     print "Showing daily bar chart"
     show_k_bar(data_contrl(), title = 'Day ' + str(day))
+    return
     
 if __name__ == '__main__':
+    global day
     day = 1
     
     # 初始化资金
@@ -220,14 +229,17 @@ if __name__ == '__main__':
             print "Your trade history:\n", trade_history
             print "Your balance: ",cash[day-2]
             print "Your stock book", stock_book
+            # 更新期初资金
+            if day > 1:
+                cash[day - 1] = cash[day - 2]
         while 1:
             what_to_do = raw_input("What do you want to do next (buy/sell/check/pass)\n")
             if what_to_do == 'buy':
-                stock_book, trade_history, cash = buy(stock_book, trade_history, cash, day)
+                buy()
             if what_to_do == 'sell':
-                stock_book, trade_history, cash = sell(stock_book, trade_history, cash, day)
+                sell()
             if what_to_do == 'check':
-                check(day)
+                check()
             if what_to_do == 'pass':
                 break
             if what_to_do not in ['buy', 'sell', 'check', 'pass']:
