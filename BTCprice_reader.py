@@ -3,7 +3,6 @@
 --------------------------------
     @Author: Dyson
     @Contact: Weaver1990@163.com
-    @file: Test.py
     @time: 2017/9/13 10:04
 --------------------------------
 """
@@ -19,7 +18,7 @@ import json
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
 reload(sys)
 sys.setdefaultencoding('utf8')
-import set_log
+import set_log # MyWheels中的自定义类
 log_obj = set_log.Logger(u'数据流.log', set_log.logging.WARNING,
                          set_log.logging.DEBUG)
 log_obj.cleanup(u'数据流.log', if_cleanup=True)  # 是否需要在每次运行程序前清空Log文件
@@ -53,8 +52,9 @@ if __name__ == '__main__':
     y = []
     y0 = []
     d = {}
-    max_diff = float('-inf')
-    min_diff = float('inf')
+    # 由于min（None，int）永远是None，所以没有用None作为初始值
+    max_diff = float('-inf') # 最大价差初始化为负无穷
+    min_diff = float('inf') # 最小价差初始化为正无穷
     
     plt.figure(figsize=(fig_width,fig_height))  # 创建绘图对象
     plt.ion() # 实时图像更新
@@ -63,6 +63,7 @@ if __name__ == '__main__':
 
     i = 0 # 防止头几次数据相同，重复刷新网页
     while True:
+        # 由于刚开始运行的时候，数据重复的可能性很大，所以设置一个i，在爬取了一定量的数据时，再进行重复检测
         if i not in range(1,test_width) and len(set(y0)) <= 1 :
             print u'开始读取网页'
             start_time = time.time()
@@ -73,7 +74,7 @@ if __name__ == '__main__':
 
         price1 = re.search(ur'\d+\.{0,1}\d{0,2}', driver1.title).group()
         price2 = re.search(ur'\d+\.{0,1}\d{0,2}', driver2.title).group()
-        price_diff = float(price1) - float(price2)
+        price_diff = float(price1) - float(price2) # 实时价差
         
         max_diff = max(max_diff,price_diff)
         min_diff = min(min_diff,price_diff)
@@ -85,7 +86,7 @@ if __name__ == '__main__':
         # 生成日志
         log_obj.info("价差：%s,报价：%s | %s \n" %(price_diff,price1,price2))
         
-        # 生成每小时的波峰波谷
+        # 生成每小时的波峰波谷，json
         date = datetime.datetime.now().strftime('%Y-%m-%d')
         hour = datetime.datetime.now().hour
         if date not in d:
@@ -103,9 +104,11 @@ if __name__ == '__main__':
         y.append(price_diff)
         x.append(datetime.datetime.now())
         
+        # 只保留部分数据
         x = x[(fig_width * int(len(x) / fig_width)):]
         y = y[(fig_width * int(len(y) / fig_width)):]
         
+        # 用于控制检查重复值的宽度
         y0 = y[(check_width * int(len(y) / check_width)):]
         
         plt.plot(x, y, linewidth=1)  # 在当前绘图对象绘图（X轴，Y轴，蓝色虚线，线宽度）
